@@ -262,6 +262,7 @@ def make_video(quiz_json):
 
     final.write_videofile(OUTPUT, fps=FPS, codec="libx264", audio_codec="aac")
     print(f"✅ 비디오 생성 완료: {OUTPUT}")
+    return OUTPUT
 
 if __name__ == "__main__":
     missing = []
