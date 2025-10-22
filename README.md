@@ -1,6 +1,6 @@
 # Likelion & Zep - Video Generation
 
-## Setup Guide
+## Setup Guide & how to run the code
 
 1. **Clone the repository**
     ```bash
