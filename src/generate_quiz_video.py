@@ -16,9 +16,8 @@ FONT_MEDIUM_PATH = os.path.join(ASSETS, "fonts", "Nunito-Bold.ttf")
 
 # New design assets
 ZEP_QUIZ_LOGO = os.path.join(ASSETS, "ZEPQUIZ-logo.png")
-ZEP_QUIZ_BG = os.path.join(ASSETS, "zep_quiz_bg.png")
+PURPLE_QUIZ_BG = os.path.join(ASSETS, "purple_quiz_bg.png")
 PURPLE_PAPER = os.path.join(ASSETS, "v1_design", "purple", "purple_paper.png")
-OUTLINE_AND_CIRCLE = os.path.join(ASSETS, "v1_design", "purple", "outline_and_circle.png")
 PURPLE_ALL_CHOICES = os.path.join(ASSETS, "v1_design", "purple", "purple_all_choices.png")
 PURPLE_ANSWER = os.path.join(ASSETS, "v1_design", "purple", "purple_answer.png")
 
@@ -111,8 +110,8 @@ def render_frame(question, choices, category, progress, reveal, answer_idx):
     img = Image.new("RGBA", (W, H), (255, 255, 255, 255))
     
     # Load background with 40% opacity and overlay it
-    if os.path.exists(ZEP_QUIZ_BG):
-        bg = Image.open(ZEP_QUIZ_BG).convert("RGBA").resize((W, H))
+    if os.path.exists(PURPLE_QUIZ_BG):
+        bg = Image.open(PURPLE_QUIZ_BG).convert("RGBA").resize((W, H))
         # Reduce opacity to 40%
         bg.putalpha(Image.eval(bg.split()[3], lambda a: int(a * 0.8)))
         # Composite the background over the solid purple
@@ -360,7 +359,7 @@ def main():
     # 필요한 파일 확인
     required_files = [
         ZEP_QUIZ_LOGO,
-        ZEP_QUIZ_BG,
+        PURPLE_QUIZ_BG,
         PURPLE_PAPER,
         PURPLE_ALL_CHOICES,
         PURPLE_ANSWER,
