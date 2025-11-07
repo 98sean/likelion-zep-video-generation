@@ -11,3 +11,8 @@ proglog==0.1.12
 requests==2.32.5
 tqdm==4.67.1
 urllib3==2.5.0
+
+# for Google Trends, OpenAI
+openai>=1.0.0
+pytrends
+python-dotenv
