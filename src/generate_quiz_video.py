@@ -10,45 +10,37 @@ from moviepy.editor import (
 # 기본 설정 (9:16 숏폼)
 # ======================
 ASSETS = "../assets"
-FONT_PATH = os.path.join(ASSETS, "fonts", "Fredoka-Regular.ttf")
-FONT_BOLD_PATH = os.path.join(ASSETS, "fonts", "Fredoka-Bold.ttf")
-FONT_MEDIUM_PATH = os.path.join(ASSETS, "fonts", "Fredoka-Medium.ttf")
-SPEECH_BUBBLE_PATH = os.path.join(ASSETS, "speech_bubble.png")
+FONT_PATH = os.path.join(ASSETS, "fonts", "Nunito-Bold.ttf")
+FONT_BOLD_PATH = os.path.join(ASSETS, "fonts", "Nunito-Bold.ttf")
+FONT_MEDIUM_PATH = os.path.join(ASSETS, "fonts", "Nunito-Bold.ttf")
+
+# New design assets
+ZEP_QUIZ_LOGO = os.path.join(ASSETS, "ZEPQUIZ-logo.png")
+ZEP_QUIZ_BG = os.path.join(ASSETS, "zep_quiz_bg.png")
+PURPLE_PAPER = os.path.join(ASSETS, "v1_design", "purple", "purple_paper.png")
+OUTLINE_AND_CIRCLE = os.path.join(ASSETS, "v1_design", "purple", "outline_and_circle.png")
+PURPLE_ALL_CHOICES = os.path.join(ASSETS, "v1_design", "purple", "purple_all_choices.png")
+PURPLE_ANSWER = os.path.join(ASSETS, "v1_design", "purple", "purple_answer.png")
 
 W, H = 1080, 1920
 VIDEO_SIZE = (W, H)
-BACKGROUND_COLOR = (118, 104, 255)  # Purple/blue color from design
-CYAN = (0, 201, 242)  # #00C9F2 - 카테고리 배지 색상
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-DARK_PURPLE = (88, 78, 204)  # For sport icons and text
-QUIZ_TEXT_COLOR = (103, 88, 255)  # #6758FF - ? and QUIZ text color
-ACCENT = (205, 247, 255)  # #CDF7FF - 정답 표시 배경색
-MUTED = (168, 168, 168)  # 정답 외 선택지
+PURPLE = (118, 104, 255)
+DARK_PURPLE = (88, 78, 204)
+CYAN = (0, 201, 242)
+MUTED = (168, 168, 168)
+LETTER_PURPLE = (87, 72, 242)  # #5748F2 - for ABCD letters
 FPS = 30
 
 # 오디오 파일
 BGM_PATH = os.path.join(ASSETS, "background.mp3")
 SFX_CORRECT_PATH = os.path.join(ASSETS, "correct.wav")
 
-# 아이콘 파일 (Flaticon에서 다운로드)
-SOCCER_BALL = os.path.join(ASSETS, "sports_balls", "soccer_ball.png")
-BASKETBALL_BALL = os.path.join(ASSETS, "sports_balls", "basketball.png")
-BASEBALL_BALL = os.path.join(ASSETS, "sports_balls", "baseball.png")
-VOLLEYBALL_BALL = os.path.join(ASSETS, "sports_balls", "volleyball.png")
-FOOTBALL_BALL = os.path.join(ASSETS, "sports_balls", "football.png")
-
-BALL_ICONS = [SOCCER_BALL, BASKETBALL_BALL, BASEBALL_BALL, VOLLEYBALL_BALL, FOOTBALL_BALL]
-BALL_SIZE = 90
-
 # 타이밍
 COUNTDOWN_SECONDS = 5
 ANSWER_HOLD = 2
 OUTPUT = "quiz_video.mp4"
-
-# 레이아웃 간격(픽셀)
-LAYOUT_GAP_BUBBLE_TO_BADGE = 60
-LAYOUT_GAP_BADGE_TO_CARD = 36
 
 
 # ----------------------
@@ -56,11 +48,7 @@ LAYOUT_GAP_BADGE_TO_CARD = 36
 # ----------------------
 def load_font(size, bold=False, medium=False):
     try:
-        if bold:
-            return ImageFont.truetype(FONT_BOLD_PATH, size)
-        elif medium:
-            return ImageFont.truetype(FONT_MEDIUM_PATH, size)
-        return ImageFont.truetype(FONT_PATH, size)
+        return ImageFont.truetype(FONT_BOLD_PATH, size)
     except:
         return ImageFont.load_default()
 
@@ -80,220 +68,218 @@ def wrap_text(draw, text, font, max_w):
     return lines
 
 
-def draw_speech_bubble(img, x, y, width, height):
-    """말풍선 이미지 사용 (speech_bubble.png)"""
-    if os.path.exists(SPEECH_BUBBLE_PATH):
-        bubble = Image.open(SPEECH_BUBBLE_PATH).convert("RGBA")
-        # 지정된 크기로 리사이즈
-        bubble = bubble.resize((width, height))
-        img.paste(bubble, (x, y), bubble)
-        return (x, y, x + width, y + height)
-    else:
-        # 이미지 없을 경우 폴백
-        draw = ImageDraw.Draw(img)
-        draw.rounded_rectangle((x, y, x + width, y + height), radius=50, fill=WHITE, outline=BLACK, width=6)
-        
-        tail_points = [
-            (x + 80, y + height),
-            (x + 30, y + height + 80),
-            (x + 120, y + height)
-        ]
-        draw.polygon(tail_points, fill=WHITE, outline=BLACK)
-        
-        return (x, y, x + width, y + height)
+def draw_progress_bar(img, progress):
+    """디자인의 진행 표시줄 그리기 (체크마크와 원)"""
+    # Progress bar positioning - moved down
+    bar_y = 240
+    circle_radius = 30
+    line_y = bar_y
+    
+    # Calculate positions for 5 steps - wider spacing
+    total_width = 620
+    start_x = (W - total_width) // 2
+    step_width = total_width // 4
+    
+    draw = ImageDraw.Draw(img)
+    
+    positions = [start_x + i * step_width for i in range(5)]
+    
+    # Draw connecting lines
+    for i in range(4):
+        x1, x2 = positions[i], positions[i + 1]
 
-
-from PIL import Image, ImageDraw
-import os
-
-def draw_ball_progress(img, progress):
-    """Draw 5 balls with progressive white backgrounds behind them"""
-    # Ensure the base image supports transparency
-    if img.mode != "RGBA":
-        img = img.convert("RGBA")
-
-    dot_y = 1730  # Y position of balls
-    gap = int(W * 0.16)
-    start_x = W // 2 - gap * 2
-    ball_radius = BALL_SIZE // 2
-    bg_radius = ball_radius + 5  # slightly bigger background circle
-
-    # Layer for background circles
-    bg_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    draw_bg = ImageDraw.Draw(bg_layer)
-
-    # Draw white background circles behind balls based on progress
-    for i in range(5):
-        x_center = start_x + i * gap
-
-        if i < progress:
-            draw_bg.ellipse(
-                [x_center - bg_radius, dot_y - bg_radius, x_center + bg_radius, dot_y + bg_radius],
-                fill=(255, 255, 255, 255)  # fully opaque white
-            )
-
-    # Merge background layer first
-    img.alpha_composite(bg_layer)
-
-    # Draw all ball PNGs on top
-    for i in range(5):
-        x_center = start_x + i * gap
-        if i < len(BALL_ICONS) and os.path.exists(BALL_ICONS[i]):
-            this_ball_size = 70 if i == len(BALL_ICONS) - 1 else BALL_SIZE
-            ball = Image.open(BALL_ICONS[i]).convert("RGBA").resize((this_ball_size, this_ball_size))
-            x = x_center - this_ball_size // 2
-            y = dot_y - this_ball_size // 2
-            img.alpha_composite(ball, (x, y))
-
-    return img
-
+            # Incomplete line (gray)
+        draw.line([(x1 + circle_radius, line_y), (x2 - circle_radius, line_y)], 
+                    fill=(200, 200, 200), width=10)
+    
+    # Draw circles and checkmarks/dots
+    for i, x in enumerate(positions):
+        if i <= progress - 1:
+            # Completed step: purple circle with white checkmark
+            draw.ellipse([x - circle_radius, bar_y - circle_radius, 
+                         x + circle_radius, bar_y + circle_radius], 
+                        fill=PURPLE, outline=(200, 200, 200), width=5)
+        else:
+            # Incomplete step: gray circle
+            draw.ellipse([x - circle_radius, bar_y - circle_radius, 
+                         x + circle_radius, bar_y + circle_radius], 
+                        fill=WHITE, outline=(200, 200, 200), width=5)
 
 
 def render_frame(question, choices, category, progress, reveal, answer_idx):
     """디자인에 맞춘 프레임 렌더링"""
-    img = Image.new("RGBA", (W, H), BACKGROUND_COLOR + (255,))
+    img = Image.new("RGBA", (W, H), (255, 255, 255, 255))
+    
+    # Load background with 40% opacity and overlay it
+    if os.path.exists(ZEP_QUIZ_BG):
+        bg = Image.open(ZEP_QUIZ_BG).convert("RGBA").resize((W, H))
+        # Reduce opacity to 40%
+        bg.putalpha(Image.eval(bg.split()[3], lambda a: int(a * 0.8)))
+        # Composite the background over the solid purple
+        img = Image.alpha_composite(img, bg)
+    
     draw = ImageDraw.Draw(img)
-
-    # 투명도 효과를 위한 오버레이 레이어 생성 (하이라이트 박스를 그릴 곳)
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0)) 
-    overlay_draw = ImageDraw.Draw(overlay)
-
-    # --- 말풍선 (? / QUIZ) ---
-    # 말풍선: 669x486, 위치: x=205, y=150
-    bubble_bounds = draw_speech_bubble(img, 205, 150, 669, 486)
     
-    # 말풍선 중앙 계산
-    bubble_center_x = 205 + 669 // 2
+    # Draw progress bar at top
+    draw_progress_bar(img, progress)
     
-    # 물음표: size=180, bold, color=#6758FF, 중앙 정렬
-    qmark_font = load_font(180, bold=True)
-    qmark_bbox = draw.textbbox((0, 0), "?", font=qmark_font)
-    qmark_width = qmark_bbox[2] - qmark_bbox[0]
-    qmark_x = bubble_center_x - qmark_width // 2 - 15
-    draw.text((qmark_x, 194), "?", font=qmark_font, fill=QUIZ_TEXT_COLOR)
+    # --- Sports Quiz badge ---
+    # Position: moved down and made bigger
+    badge_y = 387
+    badge_text = f"{category} Quiz"
+    badge_font = load_font(40, bold=True)
+    bbox = draw.textbbox((0, 0), badge_text, font=badge_font)
+    badge_w = bbox[2] - bbox[0] + 100
+    badge_h = 80
+    badge_x = (W - badge_w) // 2
     
-    # QUIZ 텍스트: size=110, bold, 중앙 정렬
-    quiz_font = load_font(110, bold=True)
-    quiz_bbox = draw.textbbox((0, 0), "QUIZ", font=quiz_font)
-    quiz_width = quiz_bbox[2] - quiz_bbox[0]
-    quiz_x = bubble_center_x - quiz_width // 2 - 10
-    quiz_y = 194 + 180 + 20
-    draw.text((quiz_x, quiz_y), "QUIZ", font=quiz_font, fill=QUIZ_TEXT_COLOR)
-
-    # --- 카테고리 배지 (SPORTS) ---
-    # 파란 박스: width=209, height=78, color=#00C9F2, position: x=154, y=693
-    tag_w = 209
-    tag_h = 78
-    tag_x = 154
-    tag_y = 693
-    draw.rounded_rectangle([tag_x, tag_y, tag_x + tag_w, tag_y + tag_h], 
-                          radius=20, fill=CYAN)
+    draw.rounded_rectangle([badge_x, badge_y, badge_x + badge_w, badge_y + badge_h],
+                          radius=40, fill=PURPLE)
     
-    # 텍스트: fontsize=40, Fredoka Medium, 중앙 정렬
-    tag_font = load_font(40, medium=True)
-    tag_text = category
-    tag_bbox = draw.textbbox((0, 0), tag_text, font=tag_font)
-    tag_text_width = tag_bbox[2] - tag_bbox[0]
-    tag_text_height = tag_bbox[3] - tag_bbox[1]
-    tag_text_x = tag_x + (tag_w - tag_text_width) // 2
-    tag_text_y = tag_y + (tag_h - tag_text_height) // 2 - tag_bbox[1]
-    draw.text((tag_text_x, tag_text_y), tag_text, font=tag_font, fill=WHITE)
-
-    # --- 질문 카드 (772x789, 위치: x=154, y=812) ---
-    box_w = 772
-    box_h = 789
-    box_x = 154
-    box_y = 812
+    text_x = badge_x + (badge_w - (bbox[2] - bbox[0])) // 2
+    text_y = badge_y + (badge_h - (bbox[3] - bbox[1])) // 2 - bbox[1]
+    draw.text((text_x, text_y), badge_text, font=badge_font, fill=WHITE)
     
-    draw.rounded_rectangle([box_x, box_y, box_x + box_w, box_y + box_h], 
-                          radius=40, fill=WHITE, outline=BLACK, width=5)
+    # --- Purple paper background for question ---
+    # Wider and moved down
+    paper_y = 486
+    paper_width = 925
+    paper_height = 385
     
-    # 1. 질문 텍스트: 카드의 가로 중앙에 정렬
-    q_font = load_font(52, bold=True)
-    q_text = "Q. " + question
-    q_lines = wrap_text(draw, q_text, q_font, 700) # 최대 너비 700으로 줄바꿈
+    if os.path.exists(PURPLE_PAPER):
+        paper = Image.open(PURPLE_PAPER).convert("RGBA")
+        paper = paper.resize((paper_width, paper_height))
+        paper_x = 90
+        img.paste(paper, (paper_x, paper_y), paper)
+    else:
+        # Fallback: draw rounded rectangle
+        paper_x = (W - paper_width) // 2
+        draw.rounded_rectangle([paper_x, paper_y, paper_x + paper_width, paper_y + paper_height],
+                              radius=35, fill=(200, 190, 255))
     
-    y = 906
-    card_inner_width = box_w 
-    card_start_x = box_x
+    # --- Question text ---
+    q_font = load_font(62, bold=True)
+    q_text = f"Q. {question}"
+    q_lines = wrap_text(draw, q_text, q_font, 800)
+    
+    # Calculate total height of all lines
+    line_height = 65
+    total_text_height = len(q_lines) * line_height
+    
+    # Center text block vertically within paper
+    q_y = paper_y + (paper_height - total_text_height) // 2
+    
     for line in q_lines:
-        text_width = draw.textlength(line, font=q_font)
-        # 텍스트를 카드 내부(772px)의 중앙에 배치
-        line_x = card_start_x + (card_inner_width - text_width) // 2
+        bbox = draw.textbbox((0, 0), line, font=q_font)
+        line_w = bbox[2] - bbox[0]
+        line_x = (W - line_w) // 2
+        draw.text((line_x, q_y), line, font=q_font, fill=BLACK)
+        q_y += line_height
+    
+    # --- Answer choices ---
+    # Moved down significantly and made wider
+    choices_y = 914
+    choices_width = 726
+    choices_height = 536
+    
+    if os.path.exists(PURPLE_ALL_CHOICES):
+        # Use the pre-made choices image with ABCD
+        choices_img = Image.open(PURPLE_ALL_CHOICES).convert("RGBA")
+        choices_img = choices_img.resize((choices_width, choices_height))
+        choices_x = (W - choices_width) // 2
         
-        draw.text((line_x, y), line, font=q_font, fill=BLACK)
-        y += 60
-    
-    # 선택지 컨테이너: position: x=234, y=1081, width: 710, height: 456
-    ans_font = load_font(48, bold=False) # Regular font for incorrect/unrevealed
-    ans_font_medium = load_font(48, medium=True) # Medium font for correct answer
-    
-    ans_container_x = 234
-    ans_container_y = 1096
-    ans_container_h = 456
-    num_choices = len(choices)
-    
-    # 각 선택지의 세로 간격 계산 (균등 배치)
-    ans_spacing = ans_container_h / num_choices
+        # Paste the base choices image first
+        img.paste(choices_img, (choices_x, choices_y), choices_img)
         
-    # --- 진행바 (축구공 등) ---
-    draw_ball_progress(img, progress)
-    
-    # 정답 하이라이트 박스를 먼저 오버레이에 그립니다. (텍스트 아래에 오도록)
-    if reveal and 0 <= answer_idx < len(choices):
-        box_w_new = 758
-        box_h_new = 128
-        accent_80_opacity = ACCENT + (204,)
-        box_x_start = 161
-
-        # --- compute vertical alignment properly ---
-        ascent, descent = ans_font.getmetrics()
-        text_height = ascent + descent
-        text_center_offset = text_height / 2 - descent
-
-        text_baseline_y = ans_container_y + answer_idx * ans_spacing
-        visual_center_y = text_baseline_y + text_center_offset + 14
-
-        box_y_start = visual_center_y - box_h_new / 2
-
-        highlight_box = [
-            box_x_start,
-            box_y_start,
-            box_x_start + box_w_new,
-            box_y_start + box_h_new,
-        ]
-        overlay_draw.rectangle(highlight_box, fill=accent_80_opacity)
-
-    img.alpha_composite(overlay)
-
-
-
-    # 이제 텍스트를 그립니다. (합성된 오버레이 위에 텍스트가 오도록)
-    for i, ans in enumerate(choices):
-        ans_x = ans_container_x
-        ans_y = ans_container_y + int(i * ans_spacing) # 텍스트 베이스라인 Y
+        # If revealing answer, overlay purple_answer.png on the correct answer
+        if reveal and os.path.exists(PURPLE_ANSWER):
+            purple_ans_img = Image.open(PURPLE_ANSWER).convert("RGBA")
+            # Size of a single answer bubble
+            single_answer_height = choices_height // 4
+            purple_ans_img = purple_ans_img.resize((choices_width, single_answer_height))
+            # Position it over the correct answer
+            answer_y_offset = int(answer_idx * single_answer_height)
+            img.paste(purple_ans_img, (choices_x, choices_y + answer_y_offset), purple_ans_img)
         
-        if reveal and i == answer_idx:
-            # 정답은 요청대로 Black 색상, Fredoka Medium 폰트
-            current_font = ans_font_medium
-            color = BLACK 
+        # Now recreate draw object since we modified img
+        draw = ImageDraw.Draw(img)
+        
+        # Add ABCD letters in the circles
+        labels = ["A", "B", "C", "D"]
+        letter_font = load_font(49, bold=True)
+        circle_center_x = choices_x + 60
+        choice_spacing = choices_height / 4 + 2.5
+        
+        for i in range(4):
+            letter = labels[i]
+            letter_bbox = draw.textbbox((0, 0), letter, font=letter_font)
+            letter_width = letter_bbox[2] - letter_bbox[0]
+            letter_height = letter_bbox[3] - letter_bbox[1]
             
-            # 텍스트의 실제 Y 위치는 ans_y 베이스라인에서 시작
-            draw.text((ans_x, ans_y), ans, font=current_font, fill=color)
-
-        elif reveal:
-            # 오답은 회색으로
-            current_font = ans_font 
-            color = MUTED 
-            draw.text((ans_x, ans_y), ans, font=current_font, fill=color)
-        else:
-            # 정답 공개 전에는 모두 검정으로
-            current_font = ans_font
-            color = BLACK
-            draw.text((ans_x, ans_y), ans, font=current_font, fill=color)
+            # Center letter in the circle
+            letter_x = circle_center_x - letter_width // 2 + 1
+            letter_y_center = choices_y + int(i * choice_spacing + choice_spacing / 2)
+            letter_y = letter_y_center - letter_height // 2 - letter_bbox[1] - 5
+            
+            # Always use purple color for letters
+            draw.text((letter_x, letter_y), letter, font=letter_font, fill=LETTER_PURPLE)
+        
+        # Add answer text on top of the choices bubbles
+        ans_font = load_font(56, medium=False)
+        
+        for i, ans in enumerate(choices):
+            # Remove number prefix if exists
+            clean_ans = ans.split(". ", 1)[-1] if ". " in ans else ans
+            
+            # Calculate text dimensions
+            text_bbox = draw.textbbox((0, 0), clean_ans, font=ans_font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            
+            # Center text horizontally
+            text_x = choices_x + (choices_width - text_width) // 2
+            
+            # Center text vertically - align with ABCD
+            text_y_center = choices_y + int(i * choice_spacing + choice_spacing / 2)
+            text_y = text_y_center - text_height // 2 - text_bbox[1] - 5
+            
+            # All text stays black
+            draw.text((text_x, text_y), clean_ans, font=ans_font, fill=BLACK)
+    else:
+        # Fallback: draw simple choice list
+        ans_font = load_font(56)
+        choice_spacing = 120
+        text_x = 280
+        
+        for i, ans in enumerate(choices):
+            labels = ["A", "B", "C", "D"]
+            text = f"{labels[i]}. {ans.split('. ', 1)[-1] if '. ' in ans else ans}"
+            text_y = choices_y + i * choice_spacing
+            
+            if reveal and i == answer_idx:
+                color = PURPLE
+            else:
+                color = BLACK
+            
+            draw.text((text_x, text_y), text, font=ans_font, fill=color)
+    
+    # --- ZEP QUIZ logo at bottom ---
+    logo_y = 1560
+    if os.path.exists(ZEP_QUIZ_LOGO):
+        logo = Image.open(ZEP_QUIZ_LOGO).convert("RGBA")
+        logo_width = 342
+        aspect = logo.height / logo.width
+        logo = logo.resize((logo_width, int(logo_width * aspect)))
+        logo_x = (W - logo_width) // 2
+        img.paste(logo, (logo_x, logo_y), logo)
+    else:
+        logo_font = load_font(70, bold=True)
+        logo_text = "ZEP QUIZ"
+        bbox = draw.textbbox((0, 0), logo_text, font=logo_font)
+        logo_x = (W - (bbox[2] - bbox[0])) // 2
+        draw.text((logo_x, logo_y), logo_text, font=logo_font, fill=PURPLE)
     
     return img.convert("RGB")
-
 
 
 # ----------------------
@@ -303,9 +289,12 @@ def make_video(quiz_data):
     """카운트다운 애니메이션과 오디오가 포함된 퀴즈 비디오 생성"""
     data = json.loads(quiz_data) if isinstance(quiz_data, str) else quiz_data
     question = data["question"]
-    choices = data["choices"]
-    answer_idx = data["answerIndex"]
-    category = data["category"]
+    choices = data["options"]
+    answer = data["answer"]
+    category = data["category"].capitalize()
+    
+    # Find answer index from the answer text
+    answer_idx = choices.index(answer) if answer in choices else 0
 
     # 비디오 프레임 - 카운트다운 단계
     clips = []
@@ -322,7 +311,6 @@ def make_video(quiz_data):
     final = concatenate_videoclips(clips, method="compose")
 
     # ---------- 오디오 믹스 ----------
-    # BGM 로드 및 길이 맞추기
     bgm = None
     if os.path.exists(BGM_PATH):
         bgm = AudioFileClip(BGM_PATH).subclip(0.8).volumex(0.35)
@@ -331,14 +319,12 @@ def make_video(quiz_data):
         else:
             bgm = bgm.subclip(0, final.duration)
 
-    # 정답 효과음
     sfx_clip = None
     if os.path.exists(SFX_CORRECT_PATH):
         sfx = AudioFileClip(SFX_CORRECT_PATH).volumex(1.0)
         answer_start = final.duration - ANSWER_HOLD
         sfx_clip = sfx.set_start(answer_start)
 
-    # 정답 구간에서는 BGM 페이드아웃 후 SFX만 재생
     if bgm and sfx_clip:
         fade_duration = 0.3
         answer_start = final.duration - ANSWER_HOLD
@@ -359,23 +345,30 @@ def make_video(quiz_data):
 def main():
     quiz_json_str = """
     {
-      "category": "SPORTS",
+      "category": "sports",
       "question": "Which country won the FIFA World Cup in 2022?",
-      "choices": [
-        "1. France",
-        "2. Argentina",
-        "3. Brazil",
-        "4. Croatia"
+      "options": [
+        "France",
+        "Argentina",
+        "Brazil",
+        "Croatia"
       ],
-      "answerIndex": 1
+      "answer": "Argentina"
     }
     """
     
     # 필요한 파일 확인
-    missing = []
-    for p in [SPEECH_BUBBLE_PATH, BGM_PATH, SFX_CORRECT_PATH] + BALL_ICONS:
-        if not os.path.exists(p):
-            missing.append(p)
+    required_files = [
+        ZEP_QUIZ_LOGO,
+        ZEP_QUIZ_BG,
+        PURPLE_PAPER,
+        PURPLE_ALL_CHOICES,
+        PURPLE_ANSWER,
+        BGM_PATH,
+        SFX_CORRECT_PATH
+    ]
+    
+    missing = [p for p in required_files if not os.path.exists(p)]
     
     if missing:
         print(f"⚠️  누락된 파일 (비디오는 제한적으로 작동합니다):")
