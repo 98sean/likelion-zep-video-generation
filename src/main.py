@@ -1,5 +1,6 @@
 import json
 
+from fetch_trends import get_top_google_trends
 from generate_quiz import create_quizzes
 from fetch_trends_serpapi import fetch_trending_topics
 
