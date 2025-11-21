@@ -1,0 +1,62 @@
+[
+  {
+    "category": "sports",
+    "question": "Which team won the championship last season overall?",
+    "options": [
+      "Lions secured tough victory",
+      "Eagles dominated final match",
+      "Tigers finished with upset",
+      "Sharks pushed for comeback"
+    ],
+    "answer": "Eagles dominated final match"
+  },
+  { 
+    "category": "sports", 
+    "question": "Which country won the FIFA World Cup in 2022?", 
+    "options": [ "France", "Argentina", "Brazil", "Croatia" ], 
+    "answer": "Argentina" },
+  {
+    "category": "sports",
+    "question": "Who scored the winning goal in overtime yesterday night?",
+    "options": [
+      "Ryan controlled decisive puck",
+      "Marco executed clean finish",
+      "Jalen pushed crucial shot",
+      "Diego placed tight angle"
+    ],
+    "answer": "Marco executed clean finish"
+  },
+  {
+    "category": "sports",
+    "question": "Which athlete broke the world sprinting record this year?",
+    "options": [
+      "Jonas delivered historic run",
+      "Khalid reached blazing speed",
+      "Armin set new milestone",
+      "Felix captured fastest lap"
+    ],
+    "answer": "Jonas delivered historic run"
+  },
+  {
+    "category": "sports",
+    "question": "Which country hosted the global championship tournament recently?",
+    "options": [
+      "Brazil organized major games",
+      "Korea welcomed global teams",
+      "France supported exciting matches",
+      "Canada coordinated full event"
+    ],
+    "answer": "Korea welcomed global teams"
+  },
+  {
+    "category": "sports",
+    "question": "Which player earned the league defensive award last season?",
+    "options": [
+      "Bruno blocked multiple drives",
+      "Ethan protected tight zone",
+      "Caleb forced difficult turnovers",
+      "Mason guarded key shooters"
+    ],
+    "answer": "Bruno blocked multiple drives"
+  }
+]

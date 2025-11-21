@@ -579,7 +579,7 @@ def load_quizzes_from_file(path):
 
 
 def main():
-    # Use a quizzes file placed next to this script (inside src/)
+    # dummy_quizzes.json 대신에 generate된 json 파일 path 
     INPUT_JSON = os.path.join(BASE_DIR, "dummy_quizzes.json")
     INPUT_JSON = os.path.normpath(INPUT_JSON)
     NUM_QUIZZES_TO_GENERATE = 2     # set how many to output
