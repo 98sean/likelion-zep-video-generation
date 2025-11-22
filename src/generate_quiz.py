@@ -32,6 +32,16 @@ def create_quizzes(topic: str) -> str:
     - Output ONLY the JSON object — no explanations, no markdown.
     - Ensure each "answer" matches exactly one of its "options".
     - Each question must naturally and explicitly reference the topic "{topic}" within the question text.
+    IMPORTANT:
+    - Do NOT ask about games, odds, injuries, trades, or records that depend on events after September 2024.
+    - When referring to stats or records, phrase them as being
+      "through the end of the 2023–24 season" or earlier.
+    - Prefer:
+      - long-term records or achievements,
+      - famous moments or storylines that happened before September 2024.
+    - Example: 
+      - "question": “During the 2023–24 season, Jokic averaged…”, options: []"26.4", "25.1", 27", "27.4"], answer: "26.4"
+      - "question": "Which team won 2019 West Finals sweep?", "options": ["Trail Blazers", "Warriors", "Both tied", "Neither"], "answer": "Warriors"
     """
 
     response = client.chat.completions.create(
