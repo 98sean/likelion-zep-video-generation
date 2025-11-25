@@ -20,6 +20,6 @@
     ```bash
     python -c "import moviepy, numpy, PIL, imageio; print('OK')"
 
-5. **Run auto_generation.py**
+5. **Run auto_quiz_scheduler.py**
    ```bash
-   python auto_generation.py
+   python auto_quiz_scheduler.py
