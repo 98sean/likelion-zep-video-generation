@@ -2,3 +2,4 @@
 src/.env
 *.mp4
 *.json
+.env

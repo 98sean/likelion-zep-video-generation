@@ -492,8 +492,15 @@ def render_frame(question, choices, category, progress, reveal, answer_idx, them
 # ----------------------
 # 비디오 생성
 # ----------------------
-def make_video(quiz_data, theme=None):
+def make_video(quiz_data, theme=None, output_path=None):
     """카운트다운 애니메이션과 오디오가 포함된 퀴즈 비디오 생성"""
+    global OUTPUT
+
+    if output_path is None:
+        output_path = OUTPUT
+    else:
+        OUTPUT = output_path  # 기존 main()에서 쓰더라도 깨지지 않게 유지
+
     data = json.loads(quiz_data) if isinstance(quiz_data, str) else quiz_data
     question = data["question"]
     choices = data["options"]
@@ -557,9 +564,9 @@ def make_video(quiz_data, theme=None):
     elif sfx_clip:
         final = final.set_audio(sfx_clip)
 
-    final.write_videofile(OUTPUT, fps=FPS, codec="libx264", audio_codec="aac")
-    print(f"✅ 비디오 생성 완료: {OUTPUT}")
-    return OUTPUT
+    final.write_videofile(output_path, fps=FPS, codec="libx264", audio_codec="aac")
+    print(f"✅ 비디오 생성 완료: {output_path}")
+    return output_path
 
 
 # --- MAIN ---
