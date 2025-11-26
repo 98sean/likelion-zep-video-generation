@@ -1,13 +1,11 @@
 import json
 
-from fetch_trends import get_top_google_trends
 from generate_quiz import create_quizzes
 from fetch_trends_serpapi import fetch_trending_topics
 
 
 def main():
     print("Fetching top Google Trends...")
-    # trends = get_top_google_trends()
     trends = fetch_trending_topics()
 
     # This list will store each quiz question as a flat object
