@@ -1,5 +1,5 @@
 .idea/
-src/.env
+.env
 *.mp4
 *.json
 .env

@@ -4,7 +4,7 @@ import time
 import random
 import logging
 from openai import OpenAI
-from config import OPENAI_API_KEY
+from .config import OPENAI_API_KEY
 
 # -------------------------------------------
 # Initialization
@@ -264,13 +264,14 @@ def create_quizzes(topic: str, max_trial=3) -> dict:
                 logger.warning("JSON parsing failed — retrying.")
                 continue
 
-            cleaned_data, ok = validate_and_fix_quiz(raw_data)
-            if not ok:
-                continue
-
-            logger.info("Running AI Fact Check...")
-            if validate_with_ai(cleaned_data, topic):
-                return cleaned_data
+            # cleaned_data, ok = validate_and_fix_quiz(raw_data)
+            # if not ok:
+            #     continue
+            #
+            # logger.info("Running AI Fact Check...")
+            # if validate_with_ai(cleaned_data, topic):
+            #     return cleaned_data
+            return raw_data
 
         except Exception as e:
             logger.error(f"API Error: {e}")

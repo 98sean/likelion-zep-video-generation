@@ -1,6 +1,8 @@
 import json
-from generate_quiz import create_quizzes
-from fetch_trends_serpapi import fetch_trending_topics
+from pathlib import Path
+
+from .generate_quiz import create_quizzes
+from .fetch_trends_serpapi import fetch_trending_topics
 
 
 def load_quiz_json(raw_output):
@@ -41,14 +43,15 @@ def flatten_questions(topic, quiz_obj):
     return flat_items
 
 
-def main():
+def run_quiz_batch() -> dict:
     print("Fetching top Google Trends...")
 
     try:
         trends = fetch_trending_topics()
     except Exception as e:
-        print(f"Error fetching trends: {e}")
-        return
+        error_msg = f"Error fetching trends: {e}"
+        print(error_msg)
+        return {"success": False, "error": error_msg}
 
     all_quizzes = []
 
@@ -71,12 +74,21 @@ def main():
             print(f"❌ Error generating quiz for '{topic}': {e}")
 
     # Save results
-    output_filename = "quizzes_output.json"
-    with open(output_filename, "w", encoding="utf-8") as f:
+    output_path = Path("quizzes_output.json")
+    with output_path.open("w", encoding="utf-8") as f:
         json.dump(all_quizzes, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✅ Saved {len(all_quizzes)} quizzes to {output_filename}")
+    print(f"\n✅ Saved {len(all_quizzes)} quizzes to {output_path}")
 
+    return {
+        "success": True,
+        "output_file": str(output_path),
+        "quiz_count": len(all_quizzes),
+        "topics": trends,
+    }
+
+def main():
+    run_quiz_batch()
 
 if __name__ == "__main__":
     main()
