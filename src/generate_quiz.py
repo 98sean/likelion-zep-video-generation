@@ -186,7 +186,7 @@ def validate_with_ai(quiz_data: dict, topic: str) -> bool:
             return True
 
         logger.warning(f"   AI Critic Rejected:")
-        logger.warning(f"   Reason: {result.get{'reason'}}")
+        logger.warning(f"   Reason: {result.get('reason')}")
         logger.warning(f"   Rejected Quiz Content:")
         logger.warning(f"   Question: {quiz_data.get('question')}")
         logger.warning(f"   Options: {quiz_data.get('options')}")
