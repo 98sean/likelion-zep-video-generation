@@ -1,5 +1,5 @@
 from serpapi import GoogleSearch
-from config import SERPAPI_API_KEY
+from .config import SERPAPI_API_KEY
 
 
 def fetch_trending_topics(n: int = 3, geo: str = "US", category_id: int = 17):
