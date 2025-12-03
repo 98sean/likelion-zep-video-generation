@@ -2,5 +2,7 @@
 .env
 *.mp4
 *.json
-.env
 .venv/
+__pycache__/
+*.pyc
+*.swp
