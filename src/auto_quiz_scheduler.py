@@ -6,6 +6,7 @@ import datetime
 from fetch_trends_serpapi import fetch_trending_topics
 from generate_quiz import create_quizzes
 from generate_quiz_video import make_video
+from config import DATA_DIR, VIDEOS_DIR
 
 # -----------------------------
 # 설정
@@ -75,9 +76,12 @@ def generate_quiz_batch():
     #   - 한 파일당 MAX_QUIZZES_PER_FILE 문제
     #   - 넘치면 다음 번호 파일 생성
     # ----------------------------------------------------
+    # data 디렉토리 생성
+    os.makedirs(DATA_DIR, exist_ok=True)
+
     # 1) 기존 quizzes_output_*.json 목록 찾기
     existing_files = [
-        f for f in os.listdir(".")
+        f for f in os.listdir(DATA_DIR)
         if f.startswith("quizzes_output_") and f.endswith(".json")
     ]
 
@@ -87,14 +91,15 @@ def generate_quiz_batch():
             base = os.path.splitext(name)[0]          # quizzes_output_3
             idx_str = base.split("_")[-1]             # "3"
             return int(idx_str)
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ Could not parse index from '{name}': {e}")
             return 0
 
     if existing_files:
         existing_files.sort(key=extract_index)
         last_file = existing_files[-1]
         current_index = extract_index(last_file)
-        current_filename = last_file
+        current_filename = os.path.join(DATA_DIR, last_file)
 
         # 마지막 파일 내용 읽기
         try:
@@ -103,13 +108,13 @@ def generate_quiz_batch():
             if not isinstance(current_data, list):
                 print(f"⚠️ {current_filename} is not a list. Overwriting it.")
                 current_data = []
-        except Exception:
-            print(f"⚠️ Failed to read {current_filename}. Overwriting it.")
+        except Exception as e:
+            print(f"⚠️ Failed to read {current_filename}: {e}. Overwriting it.")
             current_data = []
     else:
         # 아직 아무 파일도 없으면 1번부터 시작
         current_index = 1
-        current_filename = f"quizzes_output_{current_index}.json"
+        current_filename = os.path.join(DATA_DIR, f"quizzes_output_{current_index}.json")
         current_data = []
 
     touched_files = set()
@@ -127,7 +132,7 @@ def generate_quiz_batch():
             touched_files.add(current_filename)
 
             current_index += 1
-            current_filename = f"quizzes_output_{current_index}.json"
+            current_filename = os.path.join(DATA_DIR, f"quizzes_output_{current_index}.json")
             current_data = []
             remaining_capacity = MAX_QUIZZES_PER_FILE
 
@@ -151,7 +156,7 @@ def generate_quiz_batch():
     return new_quizzes, current_filename
 
 
-def generate_videos_from_quizzes(quizzes, output_dir="videos"):
+def generate_videos_from_quizzes(quizzes, output_dir=VIDEOS_DIR):
     """
     주어진 퀴즈 리스트(each: {category, topic, question, options, answer})로
     각각에 대해 하나씩 영상 생성.
@@ -193,7 +198,7 @@ def main_loop():
         try:
             quizzes, json_path = generate_quiz_batch()
             if quizzes:
-                generate_videos_from_quizzes(quizzes, output_dir="videos")
+                generate_videos_from_quizzes(quizzes, output_dir=VIDEOS_DIR)
             else:
                 print("⚠️ No quizzes generated in this batch.")
         except Exception as e:

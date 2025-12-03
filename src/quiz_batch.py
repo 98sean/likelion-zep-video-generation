@@ -3,6 +3,7 @@ from pathlib import Path
 
 from .generate_quiz import create_quizzes
 from .fetch_trends_serpapi import fetch_trending_topics
+from .config import DATA_DIR
 
 
 def load_quiz_json(raw_output):
@@ -74,7 +75,24 @@ def run_quiz_batch() -> dict:
             print(f"❌ Error generating quiz for '{topic}': {e}")
 
     # Save results
-    output_path = Path("quizzes_output.json")
+    data_dir = Path(DATA_DIR)
+    data_dir.mkdir(exist_ok=True)
+
+    # 기존 quizzes_output_*.json 파일 찾아서 다음 번호 결정
+    existing_files = list(data_dir.glob("quizzes_output_*.json"))
+    if existing_files:
+        indices = []
+        for f in existing_files:
+            try:
+                idx_str = f.stem.split("_")[-1]
+                indices.append(int(idx_str))
+            except (ValueError, IndexError):
+                pass
+        next_index = max(indices) + 1 if indices else 1
+    else:
+        next_index = 1
+
+    output_path = data_dir / f"quizzes_output_{next_index}.json"
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(all_quizzes, f, ensure_ascii=False, indent=2)
 
