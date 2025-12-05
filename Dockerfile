@@ -8,4 +8,6 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 
+EXPOSE 8000
+
 CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
