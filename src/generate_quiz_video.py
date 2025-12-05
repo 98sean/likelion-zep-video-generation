@@ -5,6 +5,11 @@ from moviepy.editor import (
     ImageClip, concatenate_videoclips,
     AudioFileClip, CompositeAudioClip, vfx
 )
+from pathlib import Path
+from .config import DATA_DIR, VIDEOS_DIR
+
+DATA_DIR = Path(DATA_DIR)
+VIDEOS_DIR = Path(VIDEOS_DIR)
 
 # ======================
 # 기본 설정 (9:16 숏폼)
@@ -583,6 +588,44 @@ def load_quizzes_from_file(path):
         if not isinstance(q["options"], list) or len(q["options"]) < 2:
             raise ValueError(f"Quiz index {i} must have an 'options' list with at least 2 items.")
     return data
+
+def run_video_batch(quiz_file_name: str = "quizzes_output.json") -> dict:
+    """
+    1) DATA_DIR / quiz_file_name 에서 퀴즈 리스트를 읽고
+    2) 각 퀴즈에 대해 make_video를 돌려서
+    3) VIDEOS_DIR 아래에 mp4 파일들을 생성한 뒤
+    4) 생성된 비디오 경로 리스트를 리턴한다.
+    """
+    quiz_path = DATA_DIR / quiz_file_name
+    if not quiz_path.exists():
+        raise FileNotFoundError(f"{quiz_path} not found")
+
+    quizzes = load_quizzes_from_file(str(quiz_path))
+
+    VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
+
+    video_paths: list[str] = []
+    base_stem = Path(quiz_file_name).stem  # quizzes_output → stem
+
+    for i, quiz in enumerate(quizzes, start=1):
+        out_path = VIDEOS_DIR / f"{base_stem}-{i}.mp4"
+        print(f"\n🎬 Generating video {i}/{len(quizzes)} → {out_path}")
+
+        make_video(
+            quiz,
+            output_path=str(out_path),   # Path → str
+        )
+        video_paths.append(str(out_path))
+
+    result = {
+        "success": True,
+        "quiz_file": str(quiz_path),
+        "video_count": len(video_paths),
+        "videos": video_paths,
+    }
+
+    print("\n✨ Video batch complete.")
+    return result
 
 
 def main():
