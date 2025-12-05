@@ -74,7 +74,7 @@ def validate_and_fix_quiz(quiz_obj: dict) -> tuple[dict, bool]:
 
             q_text = cleanup_text(q["question"])
 
-            if len(q_text.split()) > 11:
+            if len(q_text.split()) > 12:
                 logger.warning(f"Validation Failed: Q{i+1} too long.")
                 return None, False
 
@@ -145,7 +145,7 @@ def validate_and_fix_quiz(quiz_obj: dict) -> tuple[dict, bool]:
 # -------------------------------------------
 # AI Fact Check
 # -------------------------------------------
-def validate_with_ai(quiz_data: dict, topic: str) -> bool:
+def validate_with_ai(quiz_data: dict, topic: str) -> tuple[bool, str]:
     quiz_text = json.dumps(quiz_data, indent=2)
 
     validation_prompt = f"""
@@ -156,11 +156,15 @@ def validate_with_ai(quiz_data: dict, topic: str) -> bool:
         JSON:
         {quiz_text}
 
-        Check these FATAL conditions:
-        1. **False Information**: Any option or answer factually wrong (up to Sept 2024).
-        2. **Ambiguity**: More than one potentially correct answer.
-        3. **Topic Relevance**: Are the questions strictly about "{topic}"?
-        4. **Future Content**: Reject if referencing events AFTER Sept 2024.
+        Check these **FATAL conditions**:
+        1. **Factual correctness**: **REJECT ONLY** if the **correct answer provided is provably false** as a stable, verifiable fact (up to Sept 2024). Do not reject if the question is "misleading" but the provided answer is factually correct (e.g., Toluca has 10 titles, Monterrey has 5; rejecting the answer "Toluca" is incorrect).
+        2. **Ambiguity**: **REJECT ONLY** if the correct answer is subjective (e.g., 'most important') or if multiple options could also be the single correct answer based on stable facts. **Questions about relative counts/rankings (e.g., "who has more titles?") are allowed if the answer is factually correct.**
+        3. **Future content**: Reject if referencing events after **September 2024**.
+        4. **Topic relevance**: Reject only if the question is completely unrelated to any main entity or component mentioned in the TOPIC: "{topic}".
+
+        - The two questions must be different.
+        - Ensure each "answer" matches exactly one of its "options".
+        - Use only widely-known, verifiable sports facts up to **September 2024**.
 
         Respond ONLY with JSON:
         {{
@@ -181,63 +185,85 @@ def validate_with_ai(quiz_data: dict, topic: str) -> bool:
         )
 
         result = json.loads(response.choices[0].message.content)
+        reason = result.get("reason", "Unknown AI rejection reason.")
 
         if result.get("valid") is True:
-            return True
+            return True, ""
 
-        logger.warning(f"   AI Critic Rejected:")
-        logger.warning(f"   Reason: {result.get('reason')}")
-        logger.warning(f"   Rejected Quiz Content:")
-        logger.warning(f"   Question: {quiz_data.get('question')}")
-        logger.warning(f"   Options: {quiz_data.get('options')}")
-        logger.warning(f"   Answer: {quiz_data.get('answer')}")
+        logger.warning(f"    AI Critic Rejected:")
+        logger.warning(f"    Reason: {reason}")
+        logger.warning(f"    Rejected Quiz Content:")
+        for i, q in enumerate(quiz_data.get("questions", []), start=1):
+            logger.warning(f"    Q{i}: {q.get('question')}")
+            logger.warning(f"        Options: {q.get('options')}")
+            logger.warning(f"        Answer: {q.get('answer')}")
 
-        return False
+        return False, reason
 
     except Exception as e:
         logger.error(f"AI Validation Error: {e}")
-        return False
-
+        return False, f"AI Validation Error: {e}"
 
 # -------------------------------------------
-# Quiz Generator
+# Prompt Builder
 # -------------------------------------------
-def create_quizzes(topic: str, max_trial=3) -> dict:
-    prompt = f"""
-        You are a creator who makes fun and engaging sports quiz content for YouTube.
-        Create TWO multiple-choice questions about "{topic}" that include interesting and relevant information for casual fans — such as recent performances, head-to-head results, notable storylines, key players, injuries, momentum, or trending news.
+def build_quiz_prompt(topic: str, feedback: str) -> str:
+    # This block is injected only if a previous attempt failed
+    feedback_block = ""
+    if feedback:
+        feedback_block = f"""
+        **!!! CRITICAL FEEDBACK - PRIOR ATTEMPT FAILED !!!**
+        The last quiz attempt failed validation. **You must strictly avoid the mistake mentioned below and generate two entirely new questions.**
+        
+        **REASON FOR REJECTION:** {feedback}
+        
+        **New Questions MUST be factually correct as of Sept 2024 and completely unique from the rejected set.**
+        """
 
-        Rules:
+    base_prompt = f"""
+        You are a creator who makes **fun and engaging** sports quiz content for YouTube.
+        Create TWO multiple-choice questions about "{topic}" that include interesting and relevant information for casual fans.
+
+        {feedback_block}
+
+        **Rules:**
         - The two questions must be different.
-        - Limit the word count, 10 words for a question and 5 words for an option.
-        - Ensure each "answer" matches exactly one of its "options".
-        - Must reference "{topic}" directly in the question text.
-        - Use only factual info up to Sept 2024.
-        - Prefer long-term records or achievements, famous moments or storylines that happened before September 2024.
-        - No fictional future events and references to information after Sept 2024.
-        - Output EXACTLY this JSON structure - no explanations, no markdown like the following:
+        - **Limit the word count:** max 12 words for a question and max 6 words for an option.
+        - **Verifiable Facts:** Use **widely-known, verifiable sports facts** (e.g., team titles, main stadium names, career totals, draft year, team roster moves).
+        - **INFORMATION CUTOFF: All facts MUST be verifiable as of September 2024.** Do NOT include any information about events, stats, or team changes that occurred after this date.
+        - **Topic Relevance:** Questions must relate to at least one primary component of the TOPIC: "{topic}".
+        - **Answer Clarity:** Ensure there is **one clear, correct answer** that exactly matches one option.
+        - Avoid overly detailed statistics or rare events unless widely known.
+        - Questions must reference the given sports topic directly.
+        - Do not generate questions with multiple potentially correct answers.
+        - Focus on fun, engaging, and factual sports trivia.
 
+        Output **EXACTLY** this JSON structure - no explanations, no preamble:
+        
         {{
           "questions": [
             {{
-              "question": "<max 10 words>",
-              "options": ["<max 5 words>", "<max 5 words>", "<max 5 words>", "<max 5 words>"],
+              "question": "<max 12 words>",
+              "options": ["<max 6 words>", "<max 6 words>", "<max 6 words>", "<max 6 words>"],
               "answer": "<one option>"
             }},
             {{
-              "question": "<max 10 words>",
-              "options": ["<max 5 words>", "<max 5 words>", "<max 5 words>", "<max 5 words>"],
+              "question": "<max 12 words>",
+              "options": ["<max 6 words>", "<max 6 words>", "<max 6 words>", "<max 6 words>"],
               "answer": "<one option>"
             }}
           ]
         }}
-
-        Examples: 
-        - "question": “During the 2023–24 season, Jokic averaged…”, options: []"26.4", "25.1", 27", "27.4"], answer: "26.4"
-        - "question": "Which team won 2019 West Finals sweep?", "options": ["Trail Blazers", "Warriors", "Both tied", "Neither"], "answer": "Warriors"
-
     """
+    return base_prompt
 
+# -------------------------------------------
+# Quiz Generator (Modified)
+# -------------------------------------------
+def create_quizzes(topic: str, max_trial=3) -> dict:
+    # Initialize the feedback message for the first attempt
+    rejection_feedback = "" 
+    
     for attempt in range(max_trial):
         try:
             logger.info(f"Generation attempt {attempt+1} for '{topic}'")
@@ -247,11 +273,14 @@ def create_quizzes(topic: str, max_trial=3) -> dict:
                 delay = 0.5 * (2 ** attempt) + random.random() * 0.3
                 time.sleep(delay)
 
+            # --- Build the prompt dynamically
+            current_prompt = build_quiz_prompt(topic, rejection_feedback)
+
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "Output valid JSON only."},
-                    {"role": "user", "content": prompt},
+                    {"role": "user", "content": current_prompt},
                 ],
                 response_format={"type": "json_object"},
             )
@@ -261,17 +290,30 @@ def create_quizzes(topic: str, max_trial=3) -> dict:
             try:
                 raw_data = json.loads(content)
             except Exception:
+                # If JSON parsing fails, set generic feedback for regeneration
+                rejection_feedback = "The model outputted invalid or unparseable JSON. You must strictly adhere to the requested JSON format."
                 logger.warning("JSON parsing failed — retrying.")
                 continue
 
-            # cleaned_data, ok = validate_and_fix_quiz(raw_data)
-            # if not ok:
-            #     continue
-            #
-            # logger.info("Running AI Fact Check...")
-            # if validate_with_ai(cleaned_data, topic):
-            #     return cleaned_data
-            return raw_data
+            cleaned_data, ok = validate_and_fix_quiz(raw_data)
+            if not ok:
+                # If structural validation fails, set generic feedback
+                rejection_feedback = "Structural or format issue found (e.g., question too long, wrong number of options, answer not matching option). Ensure all length and format rules are strictly followed."
+                continue
+
+            logger.info("Running AI Fact Check...")
+            valid, reason = validate_with_ai(cleaned_data, topic) # New: Captures the reason
+            
+            if valid:
+                return cleaned_data
+            else:
+                # Store the rejection reason and the rejected questions for the next attempt
+                q1_details = f"Q1: {cleaned_data['questions'][0]['question']} -> Answer was '{cleaned_data['questions'][0]['answer']}'."
+                q2_details = f"Q2: {cleaned_data['questions'][1]['question']} -> Answer was '{cleaned_data['questions'][1]['answer']}'."
+                rejection_feedback = f"Critic Reason: {reason}. Rejected Questions: {q1_details} {q2_details}"
+                logger.warning("Critic rejected — regenerating...")
+                continue
+
 
         except Exception as e:
             logger.error(f"API Error: {e}")
