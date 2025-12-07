@@ -9,6 +9,8 @@ from .config import OPENAI_API_KEY
 # -------------------------------------------
 # Initialization
 # -------------------------------------------
+KNOWLEDGE_CUTOFF = "May 2024"
+
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 logging.basicConfig(
@@ -157,14 +159,14 @@ def validate_with_ai(quiz_data: dict, topic: str) -> tuple[bool, str]:
         {quiz_text}
 
         Check these **FATAL conditions**:
-        1. **Factual correctness**: **REJECT ONLY** if the **correct answer provided is provably false** as a stable, verifiable fact (up to Sept 2024). Do not reject if the question is "misleading" but the provided answer is factually correct (e.g., Toluca has 10 titles, Monterrey has 5; rejecting the answer "Toluca" is incorrect).
+        1. **Factual correctness**: **REJECT ONLY** if the **correct answer provided is provably false** as a stable, verifiable fact (up to {KNOWLEDGE_CUTOFF}). Do not reject if the question is "misleading" but the provided answer is factually correct (e.g., Toluca has 10 titles, Monterrey has 5; rejecting the answer "Toluca" is incorrect).
         2. **Ambiguity**: **REJECT ONLY** if the correct answer is subjective (e.g., 'most important') or if multiple options could also be the single correct answer based on stable facts. **Questions about relative counts/rankings (e.g., "who has more titles?") are allowed if the answer is factually correct.**
-        3. **Future content**: Reject if referencing events after **September 2024**.
+        3. **Future content**: Reject if referencing events after **{KNOWLEDGE_CUTOFF}**.
         4. **Topic relevance**: Reject only if the question is completely unrelated to any main entity or component mentioned in the TOPIC: "{topic}".
 
         - The two questions must be different.
         - Ensure each "answer" matches exactly one of its "options".
-        - Use only widely-known, verifiable sports facts up to **September 2024**.
+        - Use only widely-known, verifiable sports facts up to **{KNOWLEDGE_CUTOFF}**.
 
         Respond ONLY with JSON:
         {{
@@ -175,7 +177,7 @@ def validate_with_ai(quiz_data: dict, topic: str) -> tuple[bool, str]:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5.1",
             messages=[
                 {"role": "system", "content": "You output strict JSON only."},
                 {"role": "user", "content": validation_prompt},
@@ -190,9 +192,9 @@ def validate_with_ai(quiz_data: dict, topic: str) -> tuple[bool, str]:
         if result.get("valid") is True:
             return True, ""
 
-        logger.warning(f"    AI Critic Rejected:")
+        logger.warning(f"    AI Critic Rejected:")  # noqa: F541
         logger.warning(f"    Reason: {reason}")
-        logger.warning(f"    Rejected Quiz Content:")
+        logger.warning(f"    Rejected Quiz Content:")  # noqa: F541
         for i, q in enumerate(quiz_data.get("questions", []), start=1):
             logger.warning(f"    Q{i}: {q.get('question')}")
             logger.warning(f"        Options: {q.get('options')}")
@@ -217,7 +219,7 @@ def build_quiz_prompt(topic: str, feedback: str) -> str:
         
         **REASON FOR REJECTION:** {feedback}
         
-        **New Questions MUST be factually correct as of Sept 2024 and completely unique from the rejected set.**
+        **New Questions MUST be factually correct as of {KNOWLEDGE_CUTOFF} and completely unique from the rejected set.**
         """
 
     base_prompt = f"""
@@ -230,25 +232,26 @@ def build_quiz_prompt(topic: str, feedback: str) -> str:
         - The two questions must be different.
         - **Limit the word count:** max 12 words for a question and max 6 words for an option.
         - **Verifiable Facts:** Use **widely-known, verifiable sports facts** (e.g., team titles, main stadium names, career totals, draft year, team roster moves).
-        - **INFORMATION CUTOFF: All facts MUST be verifiable as of September 2024.** Do NOT include any information about events, stats, or team changes that occurred after this date.
+        - **INFORMATION CUTOFF: All facts MUST be verifiable as of {KNOWLEDGE_CUTOFF}.** Do NOT include any information about events, stats, or team changes that occurred after this date.
         - **Topic Relevance:** Questions must relate to at least one primary component of the TOPIC: "{topic}".
         - **Answer Clarity:** Ensure there is **one clear, correct answer** that exactly matches one option.
         - Avoid overly detailed statistics or rare events unless widely known.
         - Questions must reference the given sports topic directly.
         - Do not generate questions with multiple potentially correct answers.
         - Focus on fun, engaging, and factual sports trivia.
+        - All questions and answers MUST be in English
 
         Output **EXACTLY** this JSON structure - no explanations, no preamble:
         
         {{
           "questions": [
             {{
-              "question": "<max 12 words>",
+              "question": "<max 15 words>",
               "options": ["<max 6 words>", "<max 6 words>", "<max 6 words>", "<max 6 words>"],
               "answer": "<one option>"
             }},
             {{
-              "question": "<max 12 words>",
+              "question": "<max 15 words>",
               "options": ["<max 6 words>", "<max 6 words>", "<max 6 words>", "<max 6 words>"],
               "answer": "<one option>"
             }}
@@ -277,7 +280,7 @@ def create_quizzes(topic: str, max_trial=3) -> dict:
             current_prompt = build_quiz_prompt(topic, rejection_feedback)
 
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model="gpt-5-mini",
                 messages=[
                     {"role": "system", "content": "Output valid JSON only."},
                     {"role": "user", "content": current_prompt},
