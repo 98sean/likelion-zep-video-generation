@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .quiz_batch import run_quiz_batch
 from .generate_quiz_video import run_video_batch
+from .config import DATA_DIR, VIDEOS_DIR
 
 
 app = FastAPI()
@@ -71,3 +75,81 @@ def create_video_batch(req: VideoBatchRequest):
             status_code=500,
             detail=str(e),
         )
+
+
+# -----------------------------
+# Quiz File List & Download
+# -----------------------------
+@app.get("/quizzes")
+def list_quizzes():
+    """DATA_DIR 내 퀴즈 JSON 파일 목록 반환"""
+    data_path = Path(DATA_DIR)
+    if not data_path.exists():
+        return {"files": []}
+
+    files = sorted(
+        [f.name for f in data_path.iterdir() if f.is_file() and f.suffix == ".json"],
+        reverse=True,
+    )
+    return {"files": files}
+
+
+@app.get("/quizzes/{filename}/download")
+def download_quiz(filename: str):
+    """퀴즈 JSON 파일 다운로드"""
+    # 입력 검증을 먼저 수행
+    if ".." in filename or filename.startswith("/") or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    if not filename.endswith(".json"):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    file_path = Path(DATA_DIR) / filename
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Quiz file '{filename}' not found")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type="application/json",
+    )
+
+
+# -----------------------------
+# Video File List & Download
+# -----------------------------
+@app.get("/videos")
+def list_videos():
+    """VIDEOS_DIR 내 비디오 파일 목록 반환"""
+    videos_path = Path(VIDEOS_DIR)
+    if not videos_path.exists():
+        return {"files": []}
+
+    files = sorted(
+        [f.name for f in videos_path.iterdir() if f.is_file() and f.suffix == ".mp4"],
+        reverse=True,
+    )
+    return {"files": files}
+
+
+@app.get("/videos/{filename}/download")
+def download_video(filename: str):
+    """비디오 MP4 파일 다운로드"""
+    # 입력 검증을 먼저 수행
+    if ".." in filename or filename.startswith("/") or "\\" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    if not filename.endswith(".mp4"):
+        raise HTTPException(status_code=400, detail="Invalid file type")
+
+    file_path = Path(VIDEOS_DIR) / filename
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail=f"Video file '{filename}' not found")
+
+    return FileResponse(
+        path=str(file_path),
+        filename=filename,
+        media_type="video/mp4",
+    )
