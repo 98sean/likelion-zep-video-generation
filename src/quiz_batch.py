@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
-from .generate_quiz import create_quizzes
-from .fetch_trends_serpapi import fetch_trending_topics
-from .config import DATA_DIR
+from generate_quiz import create_quizzes
+from fetch_trends_serpapi import fetch_trending_topics
+from config import DATA_DIR
 
 
 def load_quiz_json(raw_output):
@@ -48,7 +48,7 @@ def run_quiz_batch() -> dict:
     print("Fetching top Google Trends...")
 
     try:
-        trends = fetch_trending_topics()
+        trends = fetch_trending_topics(n = 15)
     except Exception as e:
         error_msg = f"Error fetching trends: {e}"
         print(error_msg)

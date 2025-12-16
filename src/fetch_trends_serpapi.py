@@ -1,8 +1,8 @@
 from serpapi import GoogleSearch
-from .config import SERPAPI_API_KEY
+from config import SERPAPI_API_KEY
 
 
-def fetch_trending_topics(n: int = 3, geo: str = "US", category_id: int = 17):
+def fetch_trending_topics(n: int = 15, geo: str = "US", category_id: int = 17):
     """
     Fetch trending topics from Google Trends 'Trending Now' section
     for a specific category and region.
@@ -21,7 +21,7 @@ def fetch_trending_topics(n: int = 3, geo: str = "US", category_id: int = 17):
         "engine": "google_trends_trending_now",
         "geo": geo,          # Region code
         "hl": "en",          # Language setting
-        "hours": 24,         # Time window in hours (4, 24, 48, 168)
+        "hours": 4,         # Time window in hours (4, 24, 48, 168)
         "category_id": category_id,
         "only_active": True, # Include only currently active trends
     }
