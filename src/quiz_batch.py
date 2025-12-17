@@ -48,7 +48,7 @@ def run_quiz_batch() -> dict:
     print("Fetching top Google Trends...")
 
     try:
-        trends = fetch_trending_topics(n = 5)
+        trends = fetch_trending_topics(n = 15)
     except Exception as e:
         error_msg = f"Error fetching trends: {e}"
         print(error_msg)
