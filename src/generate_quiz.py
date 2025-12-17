@@ -4,7 +4,7 @@ import time
 import random
 import logging
 from openai import OpenAI
-from config import OPENAI_API_KEY
+from .config import OPENAI_API_KEY
 
 # -------------------------------------------
 # Initialization
@@ -222,11 +222,11 @@ def validate_with_ai(quiz_data: dict, topic: str) -> tuple[list, str]:
         for q in final_valid_questions:
             q.pop("_id", None)
 
-        if len(final_valid_questions) >= 8:
+        if len(final_valid_questions) > 0:
             logger.info(f"AI Check Passed: {len(final_valid_questions)} questions valid.")
-            return final_valid_questions, ""
+            return final_valid_questions, "; ".join(rejection_notes)
         else:
-            logger.warning(f"AI Check Failed: Only {len(final_valid_questions)} valid. Reasons: {'; '.join(rejection_notes)}")
+            logger.warning(f"AI Check Failed: 0 valid. Reasons: {'; '.join(rejection_notes)}")
             return [], "; ".join(rejection_notes)
 
     except Exception as e:
