@@ -115,7 +115,7 @@ def main():
 
 async def run_quiz_batch_and_save(
     save_quizzes_func: "save_quizzes_to_api",
-    num_topics: int = 3
+    num_topics: int = 15
 ) -> dict:
     """
     퀴즈를 생성하고 외부 API에 바로 저장합니다.
