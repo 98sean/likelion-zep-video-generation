@@ -1,11 +1,13 @@
 from pathlib import Path
+from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from .quiz_batch import run_quiz_batch
+from .quiz_batch import run_quiz_batch, run_quiz_batch_and_save
 from .generate_quiz_video import run_video_batch
+from .quiz_api_client import save_quizzes_to_api, DEFAULT_TEMPLATE_ID, DEFAULT_CATEGORY_TREE_ID
 from .config import DATA_DIR, VIDEOS_DIR
 
 
@@ -18,6 +20,54 @@ app = FastAPI()
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+# -----------------------------
+# Save Quiz to External API
+# -----------------------------
+class QuizSaveRequest(BaseModel):
+    questions: list[dict]                   # 퀴즈 리스트 (question, options, answer, topic)
+    title: Optional[str] = None             # 퀴즈셋 제목 (없으면 topic 사용)
+    template_id: Optional[str] = None       # 템플릿 ID
+    category_tree_id: Optional[str] = None  # 카테고리 트리 ID
+
+
+@app.post("/quizzes/save")
+async def save_quiz_to_external_api(req: QuizSaveRequest):
+    """
+    생성된 퀴즈를 외부 API에 저장합니다.
+
+    Request Body:
+    {
+      "questions": [
+        {
+          "topic": "Lionel Messi",
+          "question": "Which team does Messi play for?",
+          "options": ["Barcelona", "PSG", "Real Madrid", "Man City"],
+          "answer": "PSG"
+        }
+      ],
+      "title": "Messi Quiz"  // optional
+    }
+    """
+    # questions에서 topic 추출
+    topic = req.questions[0].get("topic", "Unknown") if req.questions else "Unknown"
+
+    result = await save_quizzes_to_api(
+        topic=topic,
+        questions=req.questions,
+        title=req.title,
+        template_id=req.template_id or DEFAULT_TEMPLATE_ID,
+        category_tree_id=req.category_tree_id or DEFAULT_CATEGORY_TREE_ID,
+    )
+
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=500,
+            detail=result.get("error", "Failed to save quiz to external API")
+        )
+
+    return result
 
 
 # -----------------------------
@@ -35,6 +85,28 @@ def run_batch_from_trends():
 
     # run_quiz_batch가 {"success": False, "error": "..."} 이런 식으로 줄 경우 대비
     if not result.get("success", True):
+        raise HTTPException(
+            status_code=500,
+            detail=result.get("error", "Unknown error"),
+        )
+
+    return result
+
+
+# -----------------------------
+# Batch Quiz Generation & Save to External API
+# -----------------------------
+@app.post("/quiz-batch-and-save")
+async def create_and_save_quizzes():
+    """
+    퀴즈를 생성하고 외부 API에 바로 저장합니다:
+    - fetch trending topics (3개)
+    - 각 토픽별 퀴즈 생성 (2문제)
+    - 각 토픽별로 외부 API에 저장
+    """
+    result = await run_quiz_batch_and_save(save_quizzes_to_api)
+
+    if not result.get("success"):
         raise HTTPException(
             status_code=500,
             detail=result.get("error", "Unknown error"),

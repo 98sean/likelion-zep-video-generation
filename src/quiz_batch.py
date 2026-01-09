@@ -1,9 +1,13 @@
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .generate_quiz import create_quizzes
 from .fetch_trends_serpapi import fetch_trending_topics
 from .config import DATA_DIR
+
+if TYPE_CHECKING:
+    from .quiz_api_client import save_quizzes_to_api
 
 
 def load_quiz_json(raw_output):
@@ -107,6 +111,82 @@ def run_quiz_batch() -> dict:
 
 def main():
     run_quiz_batch()
+
+
+async def run_quiz_batch_and_save(
+    save_quizzes_func: "save_quizzes_to_api",
+    num_topics: int = 3
+) -> dict:
+    """
+    퀴즈를 생성하고 외부 API에 바로 저장합니다.
+
+    Args:
+        save_quizzes_func: quiz_api_client.save_quizzes_to_api 함수
+        num_topics: 가져올 토픽 수 (기본값: 3)
+
+    Returns:
+        저장 결과 리스트
+    """
+    print("Fetching top Google Trends...")
+
+    try:
+        trends = fetch_trending_topics(n=num_topics)
+    except Exception as e:
+        error_msg = f"Error fetching trends: {e}"
+        print(error_msg)
+        return {"success": False, "error": error_msg}
+
+    if not trends:
+        return {"success": False, "error": "No trends found"}
+
+    results = []
+
+    for i, topic in enumerate(trends, start=1):
+        print(f"\n=== Trend #{i}: {topic} ===")
+
+        try:
+            raw_quiz = create_quizzes(topic)
+            print("Raw quiz output:", raw_quiz)
+
+            quiz_obj = load_quiz_json(raw_quiz)
+            flat_items = flatten_questions(topic, quiz_obj)
+
+            if not flat_items:
+                print(f"⚠️ No valid questions for '{topic}', skipping.")
+                results.append({"topic": topic, "success": False, "error": "No valid questions"})
+                continue
+
+            # 외부 API에 저장
+            save_result = await save_quizzes_func(
+                topic=topic,
+                questions=flat_items
+            )
+
+            results.append({
+                "topic": topic,
+                "success": save_result.get("success", False),
+                "result": save_result
+            })
+
+            if save_result.get("success"):
+                print(f"✅ Saved quiz for '{topic}' to external API")
+            else:
+                print(f"❌ Failed to save quiz for '{topic}': {save_result.get('error')}")
+
+        except Exception as e:
+            print(f"❌ Error processing '{topic}': {e}")
+            results.append({"topic": topic, "success": False, "error": str(e)})
+
+    success_count = sum(1 for r in results if r.get("success"))
+    print(f"\n✅ Completed: {success_count}/{len(trends)} topics saved")
+
+    return {
+        "success": True,
+        "total_topics": len(trends),
+        "saved_count": success_count,
+        "results": results
+    }
+
 
 if __name__ == "__main__":
     main()
