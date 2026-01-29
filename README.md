@@ -9,6 +9,42 @@ A FastAPI-based system for automatically generating quiz videos from trending to
 - **FastAPI Server**: RESTful API for managing batch operations
 - **Batch Processing**: Process multiple quizzes and videos in a single workflow
 
+## Data Flow
+
+The system follows a multi-stage pipeline from trend fetching to video publishing:
+
+```mermaid
+graph LR
+    A[Google Trends/<br/>SerpAPI] -->|Fetch trending<br/>topics| B[fetch_trends_serpapi.py]
+    B -->|Topic keywords| C[OpenAI API<br/>GPT-4]
+    C -->|Generate quiz<br/>questions| D[generate_quiz.py]
+    D -->|Validate &<br/>structure| E[Quiz JSON<br/>data/]
+    E -->|Load quiz data| F[MoviePy +<br/>Pillow]
+    F -->|Render frames<br/>& audio| G[MP4 Video<br/>videos/]
+    G -->|Upload| H[YouTube<br/>Shorts]
+
+    style A fill:#e1f5ff
+    style C fill:#fff4e1
+    style E fill:#e8f5e9
+    style G fill:#fce4ec
+    style H fill:#f3e5f5
+```
+
+**Pipeline Stages:**
+
+1. **Trend Fetching**: SerpAPI queries Google Trends for trending sports topics (configurable by region/category)
+2. **Quiz Generation**: OpenAI GPT models create multiple-choice questions with validation
+   - Primary generation: GPT-5-mini creates quiz questions
+   - Validation: GPT-5.1 fact-checks answers and validates question quality
+   - Retries up to 3 times to reach target of 10 valid questions per topic
+3. **JSON Storage**: Validated quizzes saved to `data/quizzes_output_N.json` with structured schema
+4. **Video Rendering**: MoviePy generates 9:16 vertical videos (60 seconds)
+   - Dynamic text rendering with custom fonts
+   - Theme-based design (purple/green/blue)
+   - Countdown animation + answer reveal
+   - Background music + sound effects
+5. **YouTube Upload**: Automated upload to YouTube Shorts with optimized metadata
+
 ## Install
 
 ### Prerequisites
@@ -193,6 +229,40 @@ docker build -t zep-video-gen .
 # Run with Docker Compose
 docker-compose up
 ```
+
+## Configuration Reference
+
+All configuration is managed through environment variables loaded from the `.env` file. Use `python setup_env.py` to create and configure this file interactively.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `OPENAI_API_KEY` | **Yes** | None | OpenAI API key for quiz generation. Used by GPT-5-mini (quiz creation) and GPT-5.1 (validation). Get your key at https://platform.openai.com/api-keys |
+| `SERPAPI_API_KEY` | No | None | SerpAPI key for fetching Google Trends data. If not provided, you'll need to use alternative trend sources or manually provide topics. Get your key at https://serpapi.com/manage-api-key |
+| `DATA_DIR` | No | `"data"` | Directory path for storing generated quiz JSON files. Created automatically if it doesn't exist. Configured in `src/config.py` |
+| `VIDEOS_DIR` | No | `"videos"` | Directory path for storing generated MP4 video files. Created automatically if it doesn't exist. Configured in `src/config.py` |
+
+**Note**: The `.env` file is git-ignored by default to protect your API credentials. Never commit this file to version control.
+
+### Advanced Configuration
+
+You can modify additional settings directly in the source files:
+
+- **Quiz Parameters** (`src/generate_quiz.py`):
+  - `TARGET_COUNT = 10`: Number of quiz questions to generate per topic
+  - `KNOWLEDGE_CUTOFF = "May 2024"`: AI knowledge cutoff date for fact validation
+  - `max_trial = 3`: Maximum retry attempts for quiz generation
+
+- **Video Settings** (`src/generate_quiz_video.py`):
+  - `W, H = 1080, 1920`: Video dimensions (9:16 vertical format)
+  - `FPS = 30`: Frames per second
+  - `COUNTDOWN_SECONDS = 5`: Question display duration
+  - `ANSWER_HOLD = 2`: Answer reveal display duration
+  - `AVAILABLE_THEMES = ["purple", "green", "blue"]`: Color themes for videos
+
+- **Trend Fetching** (`src/fetch_trends_serpapi.py`):
+  - `geo = "US"`: Region code for trends (e.g., "US", "KR", "GB")
+  - `category_id = 17`: Google Trends category (17 = Sports, 16 = Entertainment)
+  - `hours = 4`: Time window for trends (4, 24, 48, or 168 hours)
 
 ## Troubleshooting
 
